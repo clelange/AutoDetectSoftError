@@ -14,12 +14,13 @@ from time import sleep
 
 # Settings for running:
 # set time out for the query:
-timeOut = 10
+timeOut = 30
 # threshold in 1/pb
 lumiThreshold = 100.0
 # last int. lumi value DetectSoftError has been called
 lastDetSoftErrLumi = 0
 
+currentVersion = 1.1
 wbmBaseUrl = 'http://cmswbm.cms/cmsdb/servlet/'
 wbmFormat = '?XML=1'
 wbmTimeFormat = '%Y.%m.%d %H:%M:%S'
@@ -125,6 +126,44 @@ def queryPixelSupervisor():
     return isRunning
 
 
+def queryRunParameters(runNumber, timeNow, instantLumi):
+
+    # return time since last FixingSoftError
+    intLumiSinceLastDetSoftErr = -1
+    runParams = requests.get('{0}RunParameters?RUN={1}'.format(
+        wbmBaseUrl, runNumber))
+    if (runParams.status_code != requests.codes.ok):
+        myLogger.error('RunParameters returned status code {0}'.format(
+            pageZero.status_code))
+    else:
+        statusLine = ""
+        fullPage = runParams.content
+        # find the line containing the pixel status
+        for line in reversed(fullPage.split('</TR>')):
+            if line.find("PIXEL_STATE") >= 0:
+                if line.find("RunningSoftErrorDetected") >= 0:
+                    statusLine = line
+                    print statusLine
+                    break
+        if (statusLine != ""):
+            # extract the actual state
+            statusStart = statusLine.rfind("<TD>") + 4
+            statusEnd = statusLine.rfind("</TD>")
+            lastDetSoftErrTimeWBM = statusLine[statusStart:statusEnd]
+            myLogger.info("Last time RunningSoftErrorDetected as from WBM: {0}".format(lastDetSoftErrTimeWBM))
+            lastDetSoftErrTime = datetime.strptime(lastDetSoftErrTimeWBM, wbmTimeFormat)
+            myLogger.debug("Last time RunningSoftErrorDetected: {0}".format(lastDetSoftErrTime.isoformat(' ')))
+            tDelta = timeNow - lastDetSoftErrTime
+            tDeltaSeconds = ((tDelta.microseconds + (tDelta.seconds +
+                                                     tDelta.days * 24 * 3600) * 10**6) / 10**6)
+            myLogger.info("Difference in seconds: {0}".format(tDeltaSeconds))
+            # calculate integrated lumi in pb-1 (from 1e30 cm-2 s-1), :
+            intLumiSinceLastDetSoftErr = tDeltaSeconds * instantLumi / 1e6
+            myLogger.info("Pessimistic integrated luminosity since RunningSoftErrorDetected: {0}".format(intLumiSinceLastDetSoftErr))
+
+    return intLumiSinceLastDetSoftErr
+
+
 def statusLoop():
 
     global lastDetSoftErrLumi
@@ -141,7 +180,7 @@ def statusLoop():
     tDeltaSeconds = ((tDelta.microseconds + (tDelta.seconds +
                                              tDelta.days * 24 * 3600) * 10**6) / 10**6)
     myLogger.debug("Difference in seconds: {0}".format(tDeltaSeconds))
-    if (tDeltaSeconds < 0) or (tDeltaSeconds > 20):
+    if (tDeltaSeconds < -1) or (tDeltaSeconds > 20):
         myLogger.warning(
             "PageZero time ahead of current time (bug in code?) or is lagging behind more than 20 seconds, time difference in seconds: {0}".format(tDeltaSeconds))
         return
@@ -170,9 +209,7 @@ def statusLoop():
     lumiRun = 0
     runNumber = 0
     try:
-        if (pageZeroDict["lumiRun"] == "Infinity"):
-            lumiRun = 0
-        else:
+        if not (pageZeroDict["lumiRun"] == "Infinity"):
             lumiRun = float(pageZeroDict["lumiRun"])
         runNumber = int(pageZeroDict["runNumber"])
     except:
@@ -188,10 +225,31 @@ def statusLoop():
             lumiRun - lastDetSoftErrLumi, lumiRun, lumiThreshold))
         return
 
-    myLogger.info("Threshold for DetectSoftError reached, {0} pb-1 have passed".format(
+    # get instantaneous lumi for some calculations:
+    instantLumi = 0
+    if not (pageZeroDict["instantLumi"] == "Infinity"):
+        instantLumi = float(pageZeroDict["instantLumi"])
+    myLogger.debug("Instantaneuous luminosity [1e30 cm-2 s-1]: {0}".format(instantLumi))
+    if (instantLumi == 0):
+        return
+
+    myLogger.info("General threshold for DetectSoftError reached, {0} pb-1 have passed".format(
         lumiRun - lastDetSoftErrLumi))
 
+    # get integrated lumi since last DetectSoftError
+    intLumiSinceLastDetSoftErr = queryRunParameters(runNumber, timeNow, instantLumi)
+    # trigger DetectSoftError if mechanism has not yet been called for run or threshold has been reached
+    if (intLumiSinceLastDetSoftErr < 0):
+        myLogger.info("DetectSoftError does not seem to have been triggered for this run ({})".format(intLumiSinceLastDetSoftErr))
+    elif (intLumiSinceLastDetSoftErr > lumiThreshold):
+        myLogger.info("Threshold for DetectSoftError reached, {0} pb-1 have passed".format(intLumiSinceLastDetSoftErr))
+    else:
+        myLogger.info("Threshold has not been reached yet since last DetectSoftError,  {0} pb-1 have passed".format(intLumiSinceLastDetSoftErr))
+        return
+
+
     # now call the DetectSoftError mechanism
+    return
     myLogger.info("Triggering DetectSoftError mechanism in run {0}".format(runNumber))
     lastDetSoftErrLumi = lumiRun
     try:
@@ -207,7 +265,7 @@ def statusLoop():
 
 def startTimer():
     # it auto-starts, no need of rt.start()
-    myLogger.info('Calling status loop every {0} seconds'.format(timeOut))
+    myLogger.info('Calling status loop every {0} seconds.'.format(timeOut))
     myLogger.info('Integrated luminosity threshold is {0} pb-1'.format(lumiThreshold))
     rt = RepeatedTimer(timeOut, statusLoop)
 
@@ -215,5 +273,6 @@ def startTimer():
 if __name__ == "__main__":
     myLogger.info('Creating new log file - closing this one.')
     myLogger.handlers[0].doRollover()
+    myLogger.info('You are running version {0}.'.format(currentVersion))
     myLogger.info('Starting application')
     startTimer()
