@@ -11,6 +11,12 @@ import logging.handlers
 from datetime import datetime
 from threading import Timer, Event
 from time import sleep
+# Import smtplib for the mail sending function
+import smtplib
+# Import the email modules we'll need
+from email.mime.text import MIMEText
+import os
+
 
 # Settings for running:
 # set time out for the query:
@@ -19,6 +25,10 @@ timeOut = 60
 lumiThreshold = 100.0
 # last int. lumi value DetectSoftError has been called
 lastDetSoftErrLumi = 0
+# optionally send text message or mail2sms when mechanism triggered
+senderAddress = "{}@cern.ch".format(os.getenv("USER"))
+recipientAddress = os.getenv("RECIPIENTADDRESS")
+
 
 currentVersion = 1.1
 wbmBaseUrl = 'http://cmswbm.cms/cmsdb/servlet/'
@@ -164,6 +174,22 @@ def queryRunParameters(runNumber, timeNow, instantLumi):
     return intLumiSinceLastDetSoftErr
 
 
+def sendMail(message):
+
+    # Create a text/plain message
+    msgMime = MIMEText(message)
+    msgMime['From'] = senderAddress
+    msgMime['To'] = recipientAddress
+
+    myLogger.info("Sending message from {0} to {1}".format(senderAddress, recipientAddress))
+    # Send the message via our own SMTP server, but don't include the
+    # envelope header.
+    s = smtplib.SMTP('localhost')
+    s.sendmail(senderAddress, recipientAddress, msgMime.as_string())
+    s.quit()
+
+
+
 def statusLoop():
 
     global lastDetSoftErrLumi
@@ -257,6 +283,8 @@ def statusLoop():
                                       pixelSupervisorHandler), params=pixelSupervisorPayload)
         myLogger.info("Calling the following URL: {0}".format(r.url))
         myLogger.info("Response from PixelSupervisor: {0}".format(r.status_code))
+        if recipientAddress != None:
+            sendMail("DetectSoftError triggered at {time}, run {runNumber}".format(time=timeNow, runNumber=runNumber))
     except requests.exceptions.RequestException as e:
         myLogger.error("Request error: {0}".format(e))
     # just to be safe, wait a bit before continuing

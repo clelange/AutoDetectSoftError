@@ -24,3 +24,4 @@ Settings can be found on top of the file (might switch to ArgParse later):
 | timeOut  | 60            | set time out for the query, i.e. at which frequency the check is performed |
 | lumiThreshold | 100.0    | integrated luminosity threshold in 1/pb |
 | lastDetSoftErrLumi | 0   | last int. lumi value DetectSoftError has been called (this should generally not be changed) |
+| recipientAddress | os.getenv("RECIPIENTADDRESS") | Optional email once mechanism triggered, need to set shell environment variable. Can also use [text2sms service](https://espace.cern.ch/mmmservices-help/RSSPhonebookSMS/Pages/SMSViaEmail.aspx) |
