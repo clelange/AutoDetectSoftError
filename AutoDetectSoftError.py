@@ -14,7 +14,7 @@ from time import sleep
 
 # Settings for running:
 # set time out for the query:
-timeOut = 30
+timeOut = 60
 # threshold in 1/pb
 lumiThreshold = 100.0
 # last int. lumi value DetectSoftError has been called
@@ -35,7 +35,7 @@ myLogger = logging.getLogger("AutoDetectSoftError")
 myLogger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
 fileHandler = logging.handlers.RotatingFileHandler(
-    logFileName, delay=True, backupCount=5)
+    logFileName, maxBytes=250000, backupCount=9)
 fileHandler.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 consoleHandler = logging.StreamHandler()
@@ -275,4 +275,6 @@ if __name__ == "__main__":
     myLogger.handlers[0].doRollover()
     myLogger.info('You are running version {0}.'.format(currentVersion))
     myLogger.info('Starting application')
+    # call once, then start timer with delay
+    statusLoop()
     startTimer()
