@@ -32,7 +32,7 @@ senderAddress = "{0}@cern.ch".format(os.getenv("USER"))
 recipientAddress = os.getenv("RECIPIENTADDRESS")
 
 
-currentVersion = 1.1.1
+currentVersion = "1.1.1"
 wbmBaseUrl = 'http://cmswbm.cms/cmsdb/servlet/'
 wbmFormat = '?XML=1'
 wbmTimeFormat = '%Y.%m.%d %H:%M:%S'
