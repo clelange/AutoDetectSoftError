@@ -11,7 +11,7 @@ Press ```Ctrl+C``` to quit.
 
 Tested with python 2.6.6 (default on pixel machines).
 
-For stable versions please refer to the [releases tab](releases).
+For stable versions please refer to the [releases tab](../../releases).
 
 ## Settings
 
