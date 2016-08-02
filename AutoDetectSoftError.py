@@ -26,7 +26,7 @@ lumiThreshold = 100.0
 # last int. lumi value DetectSoftError has been called
 lastDetSoftErrLumi = 0
 # optionally send text message or mail2sms when mechanism triggered
-senderAddress = "{}@cern.ch".format(os.getenv("USER"))
+senderAddress = "{0}@cern.ch".format(os.getenv("USER"))
 recipientAddress = os.getenv("RECIPIENTADDRESS")
 
 
@@ -302,6 +302,7 @@ if __name__ == "__main__":
     myLogger.info('Creating new log file - closing this one.')
     myLogger.handlers[0].doRollover()
     myLogger.info('You are running version {0}.'.format(currentVersion))
+    myLogger.info('Mail service: {0}.'.format(recipientAddress))
     myLogger.info('Starting application')
     # call once, then start timer with delay
     statusLoop()
