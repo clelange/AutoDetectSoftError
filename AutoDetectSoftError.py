@@ -167,8 +167,8 @@ def queryRunParameters(runNumber, timeNow, instantLumi):
             tDeltaSeconds = ((tDelta.microseconds + (tDelta.seconds +
                                                      tDelta.days * 24 * 3600) * 10**6) / 10**6)
             myLogger.info("Difference in seconds: {0}".format(tDeltaSeconds))
-            # calculate integrated lumi in pb-1 (from 1e30 cm-2 s-1), :
-            intLumiSinceLastDetSoftErr = tDeltaSeconds * instantLumi / 1e6
+            # calculate integrated lumi in pb-1 (from 1e30 cm-2 s-1), 1.13 roughly accounts for slope in recent runs (2nd Aug 2016):
+            intLumiSinceLastDetSoftErr = tDeltaSeconds * instantLumi / 1e6 * 1.13
             myLogger.info("Pessimistic integrated luminosity since RunningSoftErrorDetected: {0}".format(intLumiSinceLastDetSoftErr))
 
     return intLumiSinceLastDetSoftErr
