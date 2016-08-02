@@ -25,6 +25,8 @@ timeOut = 60
 lumiThreshold = 100.0
 # last int. lumi value DetectSoftError has been called
 lastDetSoftErrLumi = 0
+# lumi slope fudge factor (1.13 as of 2nd Aug 2016) to roughly account for slope
+lumiSlopeFudgeFactor = 1.13
 # optionally send text message or mail2sms when mechanism triggered
 senderAddress = "{0}@cern.ch".format(os.getenv("USER"))
 recipientAddress = os.getenv("RECIPIENTADDRESS")
@@ -167,8 +169,8 @@ def queryRunParameters(runNumber, timeNow, instantLumi):
             tDeltaSeconds = ((tDelta.microseconds + (tDelta.seconds +
                                                      tDelta.days * 24 * 3600) * 10**6) / 10**6)
             myLogger.info("Difference in seconds: {0}".format(tDeltaSeconds))
-            # calculate integrated lumi in pb-1 (from 1e30 cm-2 s-1), 1.13 roughly accounts for slope in recent runs (2nd Aug 2016):
-            intLumiSinceLastDetSoftErr = tDeltaSeconds * instantLumi / 1e6 * 1.13
+            # calculate integrated lumi in pb-1 (from 1e30 cm-2 s-1) with fudge factor
+            intLumiSinceLastDetSoftErr = tDeltaSeconds * instantLumi / 1e6 * lumiSlopeFudgeFactor
             myLogger.info("Pessimistic integrated luminosity since RunningSoftErrorDetected: {0}".format(intLumiSinceLastDetSoftErr))
 
     return intLumiSinceLastDetSoftErr
