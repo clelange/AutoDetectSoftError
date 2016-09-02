@@ -20,11 +20,13 @@ import os
 
 # Settings for running:
 # set time out for the query:
-timeOut = 60
+timeOut = 120
 # threshold in 1/pb
-lumiThreshold = 100.0
+lumiThreshold = 50.0
 # last int. lumi value DetectSoftError has been called
 lastDetSoftErrLumi = 0
+# last run number
+lastRunNumber = 0
 # lumi slope fudge factor (1.13 as of 2nd Aug 2016) to roughly account for slope
 lumiSlopeFudgeFactor = 1.13
 # optionally send text message or mail2sms when mechanism triggered
@@ -47,7 +49,7 @@ myLogger = logging.getLogger("AutoDetectSoftError")
 myLogger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
 fileHandler = logging.handlers.RotatingFileHandler(
-    logFileName, maxBytes=250000, backupCount=9)
+    logFileName, maxBytes=250000, backupCount=20)
 fileHandler.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 consoleHandler = logging.StreamHandler()
@@ -195,6 +197,7 @@ def sendMail(message):
 def statusLoop():
 
     global lastDetSoftErrLumi
+    global lastRunNumber
     timeNow = datetime.utcnow()
     myLogger.debug("Time of execution: {0}".format(timeNow))
 
@@ -246,6 +249,10 @@ def statusLoop():
         return
     myLogger.info(
         "Luminosity for current run {0} is: {1} pb-1".format(runNumber, lumiRun))
+    if (lastRunNumber != runNumber):
+	# reset lastDetSoftErrLumi if new run has started
+        lastDetSoftErrLumi = 0
+	lastRunNumber = runNumber
 
     # calculate whether threshold for DetectSoftError is reached
     if not ((lumiRun - lastDetSoftErrLumi) > lumiThreshold):
@@ -277,7 +284,6 @@ def statusLoop():
 
 
     # now call the DetectSoftError mechanism
-    return
     myLogger.info("Triggering DetectSoftError mechanism in run {0}".format(runNumber))
     lastDetSoftErrLumi = lumiRun
     try:
